@@ -353,6 +353,8 @@ ProcDecl                        (.  string name; Scope currentScope = openScopes
   '{'                           (.
                                     enterInstLocation = program.Count;
                                     program.Add(new Instruction(generateProcedureName(name), "Enter 0"));
+                                    System.Tuple<string,string> test = program[enterInstLocation];
+                                    Console.WriteLine("Procedure Name: " + name + " Label: " + test.Item1);
                                     openProcedureDeclarations.Push(name);
                                     /*
                                       Enter is supposed to have as an
@@ -602,6 +604,8 @@ VarDecl<bool external>          (.
                                       externalDeclarations.Push(new Symbol(name, (int)TastierKind.Var, (int)type, 0, 0));
                                     } else {
                                       currentScope.Push(new Symbol(name, (int)TastierKind.Var, (int)type, openScopes.Count-1, currentScope.Count(s => s.Item2 == (int)TastierKind.Var)));
+                                      Symbol testIdent = currentScope.Peek();
+                                      Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + type + " " + testIdent.Item1 + " Address: " + testIdent.Item5);
                                     }
                                 .)
   { ',' Ident<out name>         (.
@@ -609,6 +613,8 @@ VarDecl<bool external>          (.
                                       externalDeclarations.Push(new Symbol(name, (int)TastierKind.Var, (int)type, 0, 0));
                                     } else {
                                       currentScope.Push(new Symbol(name, (int)TastierKind.Var, (int)type, openScopes.Count-1, currentScope.Count(s => s.Item2 == (int)TastierKind.Var)));
+                                      Symbol testIdent = currentScope.Peek();
+                                      Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + type + " " + testIdent.Item1 + " Address: " + testIdent.Item5);
                                     }
                                 .)
   } ';'.
