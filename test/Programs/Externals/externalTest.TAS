@@ -1,11 +1,9 @@
-// This program is a simple test that external declarations work properly
+// This is the module that defines the int i and the procedure Test
 
 program Test {
-  external int i;
-  external procedure Test;
+  int i;
 
   void Test() {
-    read i;
     int sum;
     sum = 0;
     while (i > 0) {

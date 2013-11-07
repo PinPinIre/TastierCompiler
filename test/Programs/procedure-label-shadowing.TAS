@@ -19,25 +19,17 @@ program Test {
 
   void func2() {
     number = 5;
-    int local;
 
     void func3() {
       number = 6;
-      write local; // we should see 5, set in the calling context
 
       void func() {
         number = 7;
-        local = number;
-        write local; //we should see 7
       }
 
-      local = number;
-      write local; //we should see 6
       func(); // this should call the func() we defined in *this* scope!
     }
 
-    local = number;
-    write local; //we should see 5
     func3();
   }
 

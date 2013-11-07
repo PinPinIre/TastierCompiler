@@ -159,16 +159,28 @@ string generateProcedureName(string name) {
 */
 
 string getLabelForProcedureName(int lexicalLevelDifference, string name) {
-  int temp = lexicalLevelDifference; //we want to skip <lexicalLevelDifference> labels
+  /*
+     We want to skip <lexicalLevelDifference> labels backwards, but compose
+     a label that incorporates the names of all the enclosing procedures up
+     to that point. A lexical level difference of zero indicates a procedure
+     defined in the current scope; a difference of 1 indicates a procedure
+     defined in the enclosing scope, and so on.
+  */
+  int numOpenProcedures = openProcedureDeclarations.Count;
+  int numNamesToUse = (numOpenProcedures - lexicalLevelDifference);
   string theLabel = name;
 
-  foreach (string s in openProcedureDeclarations) {
-    if (temp == 0) {
+  /*
+    We need to concatenate the first <numNamesToUse> labels with a "$" to
+    get the name of the label we need to call.
+  */
+
+  var names = openProcedureDeclarations.Take(numNamesToUse);
+
+  foreach (string s in names) {
       theLabel = s + "$" + theLabel;
-    } else {
-      temp = temp - 1;
-    }
   }
+
   return theLabel;
 }
 
@@ -629,7 +641,7 @@ ExternDecl                      (.  string name; bool external = true; Scope cur
 = "external"
   ( VarDecl<external>
   | "procedure" Ident<out name> ';'
-                                (.  externalDeclarations.Push(new Symbol(name, (int)TastierKind.Proc, (int)TastierType.Undefined, 0, -1)); .)
+                                (.  externalDeclarations.Push(new Symbol(name, (int)TastierKind.Proc, (int)TastierType.Undefined, 1, -1)); .)
   ) .
 
 END Tastier.

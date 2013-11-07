@@ -1,6 +1,7 @@
 // This program tests if local variable access is working properly
 
 program Test {
+  int t;
 
   void func() {
     int local;
@@ -8,14 +9,19 @@ program Test {
 
     void func2() {
       write local2;
+      write t;
     }
 
-    local2 = 3;
+    local2 = 4;
     local = 12;
     func2();
+    write local2;
+    write local;
   }
 
   void Main() {
+      t = 42;
       func();
+      write t;
   }
 }
