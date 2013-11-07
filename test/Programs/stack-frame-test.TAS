@@ -1,0 +1,21 @@
+// This program tests if local variable access is working properly
+
+program Test {
+
+  void func() {
+    int local;
+    int local2;
+
+    void func2() {
+      write local2;
+    }
+
+    local2 = 3;
+    local = 12;
+    func2();
+  }
+
+  void Main() {
+      func();
+  }
+}
