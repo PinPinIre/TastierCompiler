@@ -12,15 +12,15 @@ program Test {
       write t;
     }
 
-    local2 = 4;
-    local = 12;
+    local2 := 4;
+    local := 12;
     func2();
     write local2;
     write local;
   }
 
   void Main() {
-      t = 42;
+      t := 42;
       func();
       write t;
   }
