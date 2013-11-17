@@ -628,7 +628,7 @@ VarDecl<bool external>          (.
                                     } else {
                                       currentScope.Push(new Symbol(name, (int)TastierKind.Var, (int)type, openScopes.Count-1, currentScope.Count(s => s.Item2 == (int)TastierKind.Var)));
                                       Symbol testIdent = currentScope.Peek();
-                                      Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + type + " " + testIdent.Item1 + " Address: " + testIdent.Item5);
+                                      Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + (TastierType)testIdent.Item3 + " " + testIdent.Item1 + " Address: " + testIdent.Item5 + " Scope Level " + testIdent.Item4);
                                     }
                                 .)
   { ',' Ident<out name>         (.
@@ -637,7 +637,7 @@ VarDecl<bool external>          (.
                                     } else {
                                       currentScope.Push(new Symbol(name, (int)TastierKind.Var, (int)type, openScopes.Count-1, currentScope.Count(s => s.Item2 == (int)TastierKind.Var)));
                                       Symbol testIdent = currentScope.Peek();
-                                      Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + type + " " + testIdent.Item1 + " Address: " + testIdent.Item5);
+                                      Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + (TastierType)testIdent.Item3 + " " + testIdent.Item1 + " Address: " + testIdent.Item5 + " Scope Level " + testIdent.Item4);
                                     }
                                 .)
   } ';'.
