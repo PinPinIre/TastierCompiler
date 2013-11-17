@@ -415,13 +415,13 @@ ProcDecl                        (.  string name; string label; Scope currentScop
 /*------------------------------------------------------------------------*/
 
 RelOp<out Instruction inst>
-=                               (.  inst = new Instruction("", "Equ"); .)
-  ( "="
-  | '<'                         (.  inst = new Instruction("", "Lss"); .)
-  | '>'                         (.  inst = new Instruction("", "Gtr"); .)
-  | '!='                         (.  inst = new Instruction("", "Neq"); .)
-  | '>='                         (.  inst = new Instruction("", "Geq"); .)
-  | '<='                         (.  inst = new Instruction("", "Leq"); .)
+=                                (.  inst = new Instruction("", "Equ"); .)
+  ( '='
+  | '<'                          (.  inst = new Instruction("", "Lss"); .)
+  | '>'                          (.  inst = new Instruction("", "Gtr"); .)
+  | "!="                         (.  inst = new Instruction("", "Neq"); .)
+  | ">="                         (.  inst = new Instruction("", "Geq"); .)
+  | "<="                         (.  inst = new Instruction("", "Leq"); .)
   ).
 
 /*------------------------------------------------------------------------*/
