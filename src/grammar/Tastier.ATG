@@ -371,9 +371,6 @@ ProcDecl                        (.  string name; string label; Scope currentScop
                                     program.Add(new Instruction("", "Enter 0"));
                                     enterInstLocation = program.Count - 1;
                                     label = generateProcedureName(name);
-
-                                    enterInstLocation = program.Count;
-                                    program.Add(new Instruction(generateProcedureName(name), "Enter 0"));
                                     openProcedureDeclarations.Push(name);
                                     /*
                                       Enter is supposed to have as an
@@ -411,7 +408,7 @@ ProcDecl                        (.  string name; string label; Scope currentScop
                                       new Instruction(label, "Enter " +
                                                       currentScope.Count(s => s.Item2 == (int)TastierKind.Var));
                                     System.Tuple<string,string> test = program[enterInstLocation];
-                                    Console.WriteLine("Procedure Name: " + name + " Label: " + test.Item1 + " Shtuff: " + test.Item2);
+                                    Console.WriteLine("Procedure Name: " + name + " Label: " + test.Item1 + " Scope Level " + (openScopes.Count-1));
                                     openProcedureDeclarations.Pop();
                                 .).
 
