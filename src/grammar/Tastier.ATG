@@ -565,7 +565,7 @@ Tastier                         (.  string name; bool external = false; .)
                                     openScopes.Push(new Scope());
                                 .)
   '{'
-  { VarDecl<external> | ProcDecl | ExternDecl }
+  { ConsDeclList | VarDecl<external> | ProcDecl | ExternDecl }
   '}'                           (.
                                     if (openScopes.Peek().Count == 0) {
                                       Warn("Warning: Program " + name + " is empty ");
@@ -648,5 +648,27 @@ ExternDecl                      (.  string name; bool external = true; Scope cur
   | "procedure" Ident<out name> ';'
                                 (.  externalDeclarations.Push(new Symbol(name, (int)TastierKind.Proc, (int)TastierType.Undefined, 1, -1)); .)
   ) .
+
+/*------------------------------------------------------------------------*/
+
+ConsDeclList                    
+= "const" ConsDecl 
+  {
+    ConsDecl
+  }.
+
+/*------------------------------------------------------------------------*/
+
+ConsDecl                        (.
+                                    string name; TastierType type; Scope currentScope = openScopes.Peek();
+                                .)
+= Ident<out name>               
+  ":="
+  Expr<out type> ';'            (.  
+                                    
+                                    currentScope.Push(new Symbol(name, (int)TastierKind.Var, (int)type, openScopes.Count-1, currentScope.Count(s => s.Item2 == (int)TastierKind.Var)));
+                                    Symbol testIdent = currentScope.Peek();
+                                    Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + (TastierType)testIdent.Item3 + " " + testIdent.Item1 + " Address: " + testIdent.Item5 + " Scope Level " + testIdent.Item4);
+                                .).
 
 END Tastier.
