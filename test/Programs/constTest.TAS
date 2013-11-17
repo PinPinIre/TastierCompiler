@@ -1,0 +1,21 @@
+program Test {
+    const
+        limit := 512;
+
+    int i, sum;
+
+    void Main() {
+        i := 10;
+        if(i = 34) {
+            write i;
+        }
+        else {
+            sum := i * limit;
+            write i;
+            write limit;
+            write sum;
+        }
+    }
+
+}
+
