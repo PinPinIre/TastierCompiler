@@ -18,6 +18,8 @@ COMPILER Tastier
   enum TastierKind : int {  // kinds of symbol
     Var,
     Proc
+    Proc,
+    Const
   };
 
 /*
@@ -313,6 +315,7 @@ Factor<out TastierType type>    (.  int n; Symbol sym; string name; .)
                                     else {
                                       type = (TastierType)sym.Item3;
                                       if ((TastierKind)sym.Item2 == TastierKind.Var) {
+                                      if ((TastierKind)sym.Item2 == TastierKind.Var || (TastierKind)sym.Item2 == TastierKind.Const) {
                                         if (sym.Item4 == 0) {
                                             if (isExternal) {
                                               program.Add(new Instruction("", "LoadG " + sym.Item1));
@@ -455,6 +458,9 @@ Stat                            (.  TastierType type; string name; Symbol sym; b
                                     if ((TastierKind)sym.Item2 != TastierKind.Var) {
                                       SemErr("cannot assign to non-variable");
                                     }
+                                    else if (sym.Item2 == (int)TastierKind.Const) {
+                                      SemErr("cannot assign to const variable");
+                                    }
                                 .)
     Expr<out type> ';'
                                 (.
@@ -575,7 +581,13 @@ Tastier                         (.  string name; bool external = false; .)
                                     openScopes.Push(new Scope());
                                 .)
   '{'
-  { ConsDeclList | VarDecl<external> | ProcDecl | ExternDecl }
+                                (. program.Add(new Instruction("$data", "Nop")); .)
+    [ConsDeclList] 
+                                (. 
+                                    program.Add(new Instruction("", "Leave"));
+                                    program.Add(new Instruction("", "Ret"));
+                                .)
+    { VarDecl<external> | ProcDecl | ExternDecl }
   '}'                           (.
                                     if (openScopes.Peek().Count == 0) {
                                       Warn("Warning: Program " + name + " is empty ");
@@ -584,6 +596,8 @@ Tastier                         (.  string name; bool external = false; .)
                                     header.Add(new Instruction("", ".names " + (externalDeclarations.Count + openScopes.Peek().Count)));
                                     foreach (Symbol s in openScopes.Peek()) {
                                       if (s.Item2 == (int)TastierKind.Var) {
+                                        header.Add(new Instruction("", ".var " + ((int)s.Item3) + " " + s.Item1));
+                                      } else if (s.Item2 == (int)TastierKind.Const) {
                                         header.Add(new Instruction("", ".var " + ((int)s.Item3) + " " + s.Item1));
                                       } else if (s.Item2 == (int)TastierKind.Proc) {
                                         header.Add(new Instruction("", ".proc " + s.Item1));
@@ -662,10 +676,12 @@ ExternDecl                      (.  string name; bool external = true; Scope cur
 /*------------------------------------------------------------------------*/
 
 ConsDeclList                    
-= "const" ConsDecl 
+= "const"
+  ConsDecl 
   {
     ConsDecl
-  }.
+  }.  
+
 
 /*------------------------------------------------------------------------*/
 
