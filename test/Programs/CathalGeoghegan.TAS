@@ -5,22 +5,30 @@ program Test {
         c := "Global";
     
     void Main() {
+        // Write constant
         write a;
+
+        //Create string, assign a pointer to a string memory address, print string
         string test;
         test := "Hello World";
         write test;
+
+        // Decale a variable after a string and reassign a string pointer and write it
         int i;
-        // write "string ", "on " , "one ", "line.", 1337;  //I haven't mangaged to get this to work correctly
+        // write "Goodbye ", "on " , "one ", "line.", 1337;  //I haven't mangaged to get this to work correctly
         test := "New String";
         write test;
-        string otherString; 
-        otherString := "Test";
-        write otherString;
+
+        // Assign int and print
         i := 10;
         write i;
+
+        // check gloabal bool abd print an inline string.
         if(b) {
             write "B is True";
         }
+
+        //print the result of a mul op
         write a*i;
     }
 
