@@ -10,6 +10,7 @@ program Test {
         test := "Hello World";
         write test;
         int i;
+        // write "string ", "on " , "one ", "line.", 1337;  //I haven't mangaged to get this to work correctly
         test := "New String";
         write test;
         string otherString; 

@@ -283,7 +283,6 @@ PRODUCTIONS
 String<out string String>  (. string outString; .)    
 =                               
     Chars                     (. outString = t.val; .)
-       
                               (. Console.WriteLine("String " + outString); .)
                               (. String = outString; .).                          
 
@@ -440,7 +439,7 @@ ProcDecl                        (.  string name; string label; Scope currentScop
                                       new Instruction(label, "Enter " +
                                                       currentScope.Count(s => s.Item2 == (int)TastierKind.Var));
                                     System.Tuple<string,string> test = program[enterInstLocation];
-                                    Console.WriteLine("Procedure Name: " + name + " Label: " + test.Item1 + " Scope Level " + (openScopes.Count-1));
+                                    //Console.WriteLine("Procedure Name: " + name + " Label: " + test.Item1 + " Scope Level " + (openScopes.Count-1));
                                     openProcedureDeclarations.Pop();
                                 .).
 
@@ -593,7 +592,7 @@ Stat                            (.  TastierType type; string name; Symbol sym; b
                                 .)
 
 | "write"
-  Expr<out type> ';'            (.
+  Expr<out type>                (.
                                     if (type == TastierType.Integer) {
                                       program.Add(new Instruction("", "Write"));
                                     }
@@ -604,6 +603,20 @@ Stat                            (.  TastierType type; string name; Symbol sym; b
                                       SemErr("integer type expected");
                                     }
                                 .)
+  { ','
+    Expr<out type>                (.
+                                    if (type == TastierType.Integer) {
+                                      program.Add(new Instruction("", "Write"));
+                                    }
+                                    else if(type == TastierType.String) {
+                                      program.Add(new Instruction("", "WriteStr"));
+                                    }
+                                    else {
+                                      SemErr("integer type expected");
+                                    }
+                                .)
+  }
+  ';' 
 
 | '{' { Stat | VarDecl<external> } '}' .
 
@@ -687,7 +700,7 @@ VarDecl<bool external>          (.
                                     } else {
                                       currentScope.Push(new Symbol(name, (int)TastierKind.Var, (int)type, openScopes.Count-1, currentScope.Count(s => s.Item2 == (int)TastierKind.Var)));
                                       Symbol testIdent = currentScope.Peek();
-                                      Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + (TastierType)testIdent.Item3 + " " + testIdent.Item1 + " Address: " + testIdent.Item5 + " Scope Level " + testIdent.Item4);
+                                      //Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + (TastierType)testIdent.Item3 + " " + testIdent.Item1 + " Address: " + testIdent.Item5 + " Scope Level " + testIdent.Item4);
                                     }
                                 .)
   { ',' Ident<out name>         (.
@@ -696,7 +709,7 @@ VarDecl<bool external>          (.
                                     } else {
                                       currentScope.Push(new Symbol(name, (int)TastierKind.Var, (int)type, openScopes.Count-1, currentScope.Count(s => s.Item2 == (int)TastierKind.Var)));
                                       Symbol testIdent = currentScope.Peek();
-                                      Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + (TastierType)testIdent.Item3 + " " + testIdent.Item1 + " Address: " + testIdent.Item5 + " Scope Level " + testIdent.Item4);
+                                      //Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + (TastierType)testIdent.Item3 + " " + testIdent.Item1 + " Address: " + testIdent.Item5 + " Scope Level " + testIdent.Item4);
                                     }
                                 .)
   } ';'.
@@ -728,11 +741,11 @@ ConsDecl                        (.
 = Ident<out name>               
   ":="
   Expr<out type> ';'            (.  
-                                    Console.WriteLine("Constant: " + name + "Free Address" + freeMemAddress);
+                                    //Console.WriteLine("Constant: " + name + "Free Address" + freeMemAddress);
                                     currentScope.Push(new Symbol(name, (int)TastierKind.Const, (int)type, openScopes.Count-1, tempMemAddress));
                                     freeMemAddress++;
                                     Symbol testIdent = currentScope.Peek();
-                                    Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + (TastierType)testIdent.Item3 + " " + testIdent.Item1 + " Address: " + testIdent.Item5 + " Scope Level " + testIdent.Item4);
+                                    //Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + (TastierType)testIdent.Item3 + " " + testIdent.Item1 + " Address: " + testIdent.Item5 + " Scope Level " + testIdent.Item4);
                                     program.Add(new Instruction("", "StoG " + (testIdent.Item5+3)));
                                 .).
 
