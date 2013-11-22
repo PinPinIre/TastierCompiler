@@ -1,0 +1,7 @@
+program Test {
+    void Main() {
+        int j;
+        j := -7;
+        write j;
+    }
+}

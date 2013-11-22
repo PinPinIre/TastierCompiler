@@ -1,0 +1,12 @@
+program Test {
+    
+    void Main() {
+        string test;
+        test := "123456789";
+        write test;
+        int i;
+        i := 0;
+    }
+
+}
+

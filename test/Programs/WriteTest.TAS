@@ -1,0 +1,16 @@
+program Test {
+
+  void Main() {
+    int i;
+    i := 34;
+    if(i = 34)
+    {
+        write i;
+    }
+    else
+    {
+        write 6;
+    }
+  }
+}
+
