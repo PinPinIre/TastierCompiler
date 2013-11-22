@@ -1,0 +1,27 @@
+program Test {
+    const
+        a := 67;
+        b := true;
+        c := "Global";
+    
+    void Main() {
+        write a;
+        string test;
+        test := "Hello World";
+        write test;
+        int i;
+        test := "New String";
+        write test;
+        string otherString; 
+        otherString := "Test";
+        write otherString;
+        i := 10;
+        write i;
+        if(b) {
+            write "B is True";
+        }
+        write a*i;
+    }
+
+}
+
