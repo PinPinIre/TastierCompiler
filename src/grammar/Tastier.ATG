@@ -313,7 +313,7 @@ Expr<out TastierType type>      (.  TastierType type1; Instruction inst; .)
 
 /*------------------------------------------------------------------------*/
 
-Factor<out TastierType type>    (.  int n; Symbol sym; string name; .)
+Factor<out TastierType type>    (.  int n; Symbol sym; string name; string value; int length; int stringPointer; .)
 =                               (.  type = TastierType.Undefined; .)
   ( Ident<out name>             (.
                                     bool isExternal = false; //CS3071 students can ignore external declarations, since they only deal with compilation of single files.
@@ -328,7 +328,6 @@ Factor<out TastierType type>    (.  int n; Symbol sym; string name; .)
                                     }
                                     else {
                                       type = (TastierType)sym.Item3;
-                                      if ((TastierKind)sym.Item2 == TastierKind.Var) {
                                       if ((TastierKind)sym.Item2 == TastierKind.Var || (TastierKind)sym.Item2 == TastierKind.Const) {
                                         if (sym.Item4 == 0) {
                                             if (isExternal) {
@@ -593,13 +592,13 @@ Stat                            (.  TastierType type; string name; Symbol sym; b
 
 | "write"
   Expr<out type> ';'            (.
-                                    if (type != TastierType.Integer) {
                                     if (type == TastierType.Integer) {
                                       program.Add(new Instruction("", "Write"));
                                     }
                                     else if(type == TastierType.String) {
                                       program.Add(new Instruction("", "WriteStr"));
                                     }
+                                    else {
                                       SemErr("integer type expected");
                                     }
                                 .)
@@ -720,15 +719,19 @@ ConsDeclList
 /*------------------------------------------------------------------------*/
 
 ConsDecl                        (.
-                                    string name; TastierType type; Scope currentScope = openScopes.Peek();
+                                    string name; TastierType type; Scope currentScope = openScopes.Peek(); int tempMemAddress;
+                                    tempMemAddress = freeMemAddress;
+                                    freeMemAddress++;
                                 .)
 = Ident<out name>               
   ":="
   Expr<out type> ';'            (.  
-                                    
-                                    currentScope.Push(new Symbol(name, (int)TastierKind.Var, (int)type, openScopes.Count-1, currentScope.Count(s => s.Item2 == (int)TastierKind.Var)));
+                                    Console.WriteLine("Constant: " + name + "Free Address" + freeMemAddress);
+                                    currentScope.Push(new Symbol(name, (int)TastierKind.Const, (int)type, openScopes.Count-1, tempMemAddress));
+                                    freeMemAddress++;
                                     Symbol testIdent = currentScope.Peek();
                                     Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + (TastierType)testIdent.Item3 + " " + testIdent.Item1 + " Address: " + testIdent.Item5 + " Scope Level " + testIdent.Item4);
+                                    program.Add(new Instruction("", "StoG " + (testIdent.Item5+3)));
                                 .).
 
 END Tastier.
