@@ -2,34 +2,30 @@ program Test {
     const
         a := 67;
         b := true;
-        c := "Global";
     
     void Main() {
-        // Write constant
-        write a;
-
-        //Create string, assign a pointer to a string memory address, print string
-        string test;
-        test := "Hello World";
-        write test;
-
-        // Decale a variable after a string and reassign a string pointer and write it
+        int ik;
+        string testString;
+        ik := a>=67 ? 1+10 : 0+10*8;
+        write ik;
+        testString := false ? "true" : "false";
+        write testString;
+        testString := true ? "true" : "false";
+        write testString;
         int i;
-        // write "Goodbye ", "on " , "one ", "line.", 1337;  //I haven't mangaged to get this to work correctly
-        test := "New String";
-        write test;
-
-        // Assign int and print
-        i := 10;
-        write i;
-
-        // check gloabal bool abd print an inline string.
-        if(b) {
-            write "B is True";
+        int j;
+        
+        // Nested for loop
+        for(i := 0; i := i+1; i < 10)
+        {
+            i := i+1;
+            write "i", i;
+            for(j := 0; j := j+1; j < 10)
+            {
+                j := j+1;
+                write "j", j;
+            }
         }
-
-        //print the result of a mul op
-        write a*i;
     }
 
 }
