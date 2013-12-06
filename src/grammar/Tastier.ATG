@@ -22,7 +22,7 @@ COMPILER Tastier
     Const
   };
 
-  int freeMemAddress = 4;
+  int freeMemAddress = 3;
 
 /*
   You'll notice some type aliases, such as the one just below, are commented
