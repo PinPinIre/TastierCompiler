@@ -1,0 +1,15 @@
+program Test {
+    Struct test
+    {
+        int i;
+        int j;
+        int j;
+        string test;
+    }
+    void Main() 
+    {
+        write "test";
+    }
+
+}
+

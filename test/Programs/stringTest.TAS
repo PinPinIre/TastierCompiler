@@ -3,9 +3,13 @@ program Test {
         a := 67;
         b := true;
         c := "Global";
+    int d;
     
     void Main() {
         write a;
+        d := 666;
+        int e;
+        e := 111;
         string test;
         test := "Hello World";
         write test;
@@ -21,6 +25,7 @@ program Test {
             write "B is True";
         }
         write a*i;
+        write c;
     }
 
 }

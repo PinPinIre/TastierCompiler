@@ -1,0 +1,54 @@
+program Test {
+    
+    void Main() 
+    {
+        int *** jk;
+        int * jj;
+        int i;
+        int j;
+        int k;
+        jk := malloc 5;
+        jj := malloc 5;
+        //write jk;
+        for(i := 0; i := i+1; i < 5)
+        {
+            jk[i] := malloc 5;
+            for(j := 0; j := j+1; j < 5)
+            {
+                jk[i][j] := malloc 5;
+            }
+        }
+        for(i := 0; i := i+1; i < 5)
+        {
+            for(j := 0; j := j+1; j < 5)
+            {
+                for(k := 0; k := k+1; k <5)
+                {
+                    jk[i][j][k] := i*25+j*5+k;
+                }
+            }
+        }
+        for(i := 0; i := i+1; i<5)
+        {
+            jj[i] := i;
+        }
+
+        for(i := 0; i := i+1; i < 5)
+        {
+            for(j := 0; j := j+1; j < 5)
+            {
+                for(k := 0; k := k+1; k <5)
+                {
+                    write jk[i][j][k];
+                }
+            }
+        }
+        write "break";
+        for(i := 0; i := i+1; i<5)
+        {
+            write jj[i];
+        }
+    }
+
+}
+
