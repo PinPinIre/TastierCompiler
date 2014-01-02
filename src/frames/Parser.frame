@@ -30,9 +30,11 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 
-using Symbol = System.Tuple<string, int, int, int, int>;
+using Symbol = System.Tuple<string, int, int, int, int, int, int>;
 using Instruction = System.Tuple<string,string>;
 using StackAddress = System.Tuple<int, int>;
+using StructVar = System.Tuple<string, string, int, int>;			
+// 1. Name of variable, 2. Struct name if it is a struct, 3. Var Type, 4. Level Indirection
 
 -->namespace
 
