@@ -1,5 +1,6 @@
 program Test {
     
+    // Complex array test
     void Main() 
     {
         int *** jk;

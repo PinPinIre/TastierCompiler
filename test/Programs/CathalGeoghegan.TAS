@@ -1,31 +1,102 @@
 program Test {
+    // Constant declarations
     const
         a := 67;
         b := true;
-    
-    void Main() {
-        int ik;
-        string testString;
-        ik := a>=67 ? 1+10 : 0+10*8;
-        write ik;
-        testString := false ? "true" : "false";
-        write testString;
-        testString := true ? "true" : "false";
-        write testString;
+
+    // Struct declarations
+    Struct struct1 {
+        string name;
         int i;
-        int j;
-        
-        // Nested for loop
-        for(i := 0; i := i+1; i < 10)
-        {
-            i := i+1;
-            write "i", i;
-            for(j := 0; j := j+1; j < 10)
-            {
-                j := j+1;
-                write "j", j;
+        int * j;
+    }
+
+    Struct struct2 {
+        string name;
+        int i;
+        struct struct1 nestedStruct;
+    }
+    // Lab 7 tests
+    void Main() {
+        int i,j,k;
+        int arraySize;
+        arraySize := 3;                     // To keep the output readable, 3 element arrays are used
+        int * array1;                       // 1-D array
+        int ** array2;                      // 2-D array
+        struct struct2 demoStruct;          // declare struct
+        write "Creating 1 dimensional array";
+        array1 := malloc arraySize;         // Allocate memory for the 1-d array
+        for(i:=0;i:=i+1;i<arraySize) {      // Fill array
+            array1[i] := i;
+        }
+        for(i:=0;i:=i+1;i<arraySize) {      // output array values
+            write array1[i];
+        }
+        write "creating 2 dimensional array";
+        array2 := malloc arraySize;         // Create 2 dimensional array and output values
+        for(i:=0;i:=i+1;i<arraySize) {
+            array2[i] := malloc arraySize;
+            for(j:=0;j:=j+1;j<arraySize) {
+                array2[i][j] := i*arraySize+j;
             }
         }
+        for(i:=0;i:=i+1;i<arraySize) {
+            for(j:=0;j:=j+1;j<arraySize) {
+                write array2[i][j];
+            }
+        }
+        // Struct access tests
+        write "Assigning values to the struct2 struct";
+        demoStruct.name := "This is a demo struct containing a string, an int and another struct.";
+        demoStruct.i := 42;
+        demoStruct.nestedStruct.name := "This is a struct within another struct and the next item is an int within a nested struct";
+        demoStruct.nestedStruct.i := 73;
+        demoStruct.nestedStruct.j := malloc 2;
+        demoStruct.nestedStruct.j[0] := 3;
+        demoStruct.nestedStruct.j[1] := 5;
+        write "Printing the contents of the struct2 struct";
+        write demoStruct.name;
+        write demoStruct.i;
+        write demoStruct.nestedStruct.name;
+        write demoStruct.nestedStruct.i;
+        write "Next is an array within the nested struct";
+        write demoStruct.nestedStruct.j[0];
+        write demoStruct.nestedStruct.j[1];
+
+        //switch test
+        write "Testing case. Should run case 5";
+        switch demoStruct.nestedStruct.j[1] {       //5
+            case 3: write "This is case 3";
+            case 4: write "This is case 4";
+            case 5: write "This is case 5";
+            case 6: write "This is case 6";
+            default: write "This is the default case";
+        }
+        write "Testing case. Should run default case";
+        switch demoStruct.i {                       //42
+            case 3: write "This is case 3";
+            case 4: write "This is case 4";
+            case 5: write "This is case 5";
+            case 6: write "This is case 6";
+            default: write "This is the default case";
+        }
+        write "Testing case. No case should match";
+        switch demoStruct.i {                       // 42
+            case 3: write "This is case 3";
+            case 4: write "This is case 4";
+            case 5: write "This is case 5";
+            case 6: write "This is case 6";
+        }
+        write "Finished Case Tests";
+        write "shifting test";
+        i:=1;
+        write i;
+        write "shift left by 5";
+        i:= i << 5;
+        write i;
+        write "shift right by 2";
+        i:= i >> 2;
+        write i;
     }
 
 }

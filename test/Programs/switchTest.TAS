@@ -1,0 +1,34 @@
+program Test {
+
+    // Switch tests
+    void Main() 
+    {
+        int i;
+        i := 100;
+        bool j;
+        j := true;
+        switch i {
+            case 1, 1000:
+                write "This is not the case that you are looking for";
+            case 2, 1111:
+                write "This also is not the case that you are looking for";
+            case 1001, 100:
+                write "This is the case that you are looking for";
+            case 1002, 1003:
+                write "This is also the case that you are looking for";
+            default:
+                {
+                    write "You shouldn't be here";
+                    switch j {
+                        case true:
+                            write "You really shouldn't be here";
+                        default:
+                            write "How did you get here?";
+                        }
+                }
+        }
+        write i;
+    }
+
+}
+

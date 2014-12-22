@@ -1,14 +1,43 @@
 program Test {
-    Struct test
+
+    Struct test1
     {
         int i;
         int j;
-        int j;
         string test;
     }
+
+    Struct test2
+    {
+        int i;
+        int j;
+        string * testStruct;
+    }
+
+    // Struct tests
     void Main() 
     {
-        write "test";
+        int i;
+        struct test1 temp;
+        struct test2 temp2;
+        temp.i := 100;
+        temp.j := 120;
+        temp2.i := 200;
+        temp2.j := 220;
+        temp2.testStruct := malloc 3;
+        temp2.testStruct[0] := "string 1";
+        temp2.testStruct[1] := "string 2";
+        temp2.testStruct[2] := "string 3";
+        for(i := 0; i:= i+1; i < 3)
+        {
+            write temp2.testStruct[i];
+        }
+        temp.test := "This is a test string";
+        write temp.i;
+        write temp.j;
+        write temp.test;
+        write temp2.i;
+        write temp2.j;
     }
 
 }

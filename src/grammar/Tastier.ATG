@@ -13,63 +13,91 @@ COMPILER Tastier
     Integer,
     Boolean,
     String,
-    Pointer,
+    Pointer,                // Unique type. Can only be returned by the malloc production. Represents a pointer to any valid type. Void pointer
     Struct
   };
 
   enum TastierKind : int {  // kinds of symbol
     Var,
     Proc,
-    Const,
-    Point,
-    Structured
+    Const
   };
 
-  int freeMemAddress = 4;
+  int freeMemAddress = 4;   // Current free mem addr. 0-2 are used to access registers in the vm. 3 is where the current free addr pointer is stored
 
+/*
+*   The struct class is used to represent all of the information that must be stored about a structs.
+*   name -> The name of the struct
+*   structVars -> A list of the structs variables
+*                 StructVar is declared in parser.frame. It is a tuple of type <string, string, int, int>. The first string is the name of the var
+*                 the second string is used if the variable is a struct and it represents the name of the struct, the first int is the vars type and
+*                 the last int is the variables level of indirection. Ordinary variables have an indirection of 0 but pointers are greater than 0. If
+*                 the value is greater than 0, the var is a pointer and the level of indirection represents if it's a pointer to a value or to another 
+*                 pointer. 
+*
+*/
   public class Struct {
     private string name;
-    private int size;
     private List<StructVar> structVars;
     
-    public Struct(String name)
-    {
+    public Struct(String name) {
       this.name = name;
       structVars = new List<StructVar>();
-      size = 0;
     }
 
-    public void addVar(StructVar var)
-    {
-      structVars.Add(var);
-      size++;
+    // Adds a variable to the struct
+    public void addVar(StructVar var) { 
+      structVars.Add(var); 
     }
 
-    public int Size()
-    {
-      return size;
+    // Getter that returns the number of vars in the struct
+    public int Size() { 
+      return structVars.Count; 
     }
 
-    public string Name()
-    {
+    // Getter that returns the name of the struct
+    public string Name() {
       return name;
     }
 
-    public bool contains(string name)
-    {
-      foreach(StructVar structVar in structVars)
-      {
+    // Function determines whether a struct contains a variable based on it's name
+    public bool contains(string name) {
+      foreach(StructVar structVar in structVars) {
         if(structVar.Item1 == name) return true;
       }
       return false;
     }
 
+    // Function that returns a variable when given it's name. Returns null if it doesn't exist
+    public StructVar getVar(string name) {
+      foreach(StructVar structVar in structVars) {
+        if(structVar.Item1 == name) return structVar;
+      }
+      return null;
+    }
+
+    // Function that returns the index of a variable in the structs list of variables
+    public int getStructVarIndex(string name) {
+      StructVar structVar;
+      int returnInt = -1;
+      for(int i = 0; i < structVars.Count; i++) {
+        structVar = structVars[i];
+        if(structVar.Item1 == name) return i;
+      }
+      return returnInt;
+    }
+
+    // Returns the list of variables.
+    public List<StructVar> getVars() {
+      return structVars;
+    }
+
   }
 
-  List<Struct> programStructs = new List<Struct>();
-
+  // Function that determines whether a struct in in the list of structs that have been declared
   bool structExists(string name)
   {
+    // Loops over every struct to find one whose name matches the passed in string. Returns false otherwise
     foreach(Struct current in programStructs)
     {
       if(name == current.Name()) return true;
@@ -77,14 +105,70 @@ COMPILER Tastier
     return false;
   }
 
+  // Function that returns a struct from the list of declared structs when passed a name.
   Struct getStruct(string name)
   {
+    // Loops over every struct to find one whose name matches the passed in string. Returns null otherwise
     foreach(Struct current in programStructs)
     {
       if(name == current.Name()) return current;
     }
     return null;
   }
+
+  // Function that returns the index of a struct in the list of declared structs.
+  int getStructIndex(string name)
+  {
+    int index = -1;
+    Struct current;
+    // Loops through each struct and checks if it's name value matches.
+    for(int i = 0; i < programStructs.Count; i++)
+    {
+      current = programStructs[i];
+      if(current.Name() == name)
+      {
+        index = i;
+        i = programStructs.Count;
+      }
+    }
+    return index;
+  }
+
+  /*
+  *   The allocateStruct function receives a name of a struct and allocates datamemory for the struct. It generates the code to store the size of 
+  *   the struct at the start of it's allocated memory block. The function also alocates memory for any structs that may be contained within the 
+  *   current struct. The function returns the memory address that has been allocated for the struct.
+  */
+  int allocateStruct(string name)
+  {
+    List<StructVar> vars;
+    StructVar var;
+    int tempMemAddr;
+    int returnInt = freeMemAddress;
+    Struct currentStruct = getStruct(name);
+
+    //Store size of stuct at the first address allocated
+    program.Add(new Instruction("", "Const " + currentStruct.Size()));
+    program.Add(new Instruction("", "StoG " + returnInt));
+    freeMemAddress = freeMemAddress + currentStruct.Size() + 1;
+
+    // Loops through vars and allocates memory for any structs found.
+    vars = currentStruct.getVars();
+    for(int i = 0; i < vars.Count; i++)
+    {
+      var = vars[i];
+      if(var.Item3 == (int)TastierType.Struct && var.Item4 == 0)
+      {
+        tempMemAddr = allocateStruct(var.Item2);
+        program.Add(new Instruction("", "Const " + tempMemAddr));
+        program.Add(new Instruction("", "StoG " + (returnInt + i + 1)));
+      }
+    }
+    return returnInt;
+  }
+
+  // The list of structs declared in the program.
+  List<Struct> programStructs = new List<Struct>();
 
 /*
   You'll notice some type aliases, such as the one just below, are commented
@@ -146,6 +230,7 @@ COMPILER Tastier
     * Symbol.Item5 -> variable's address in the stack frame pointed to by
                       Item4, -1 if procedure
     * Symbol.Item6 -> variables level of indirection, 0> for pointers, 0 for vars, -1 for procedures
+    * Symbol.Item7 -> if the variable is a struct, this is the index of the struct in the list of structs
 */
 
   class Scope : Stack<Symbol> {}
@@ -310,9 +395,15 @@ Symbol lookup(Stack<Scope> scopes, string name) {
   return null; // if the name wasn't found in any open scopes.
 }
 
-void generateLoadInstructions(Symbol sym, string name, bool isExternal)
+
+/*
+*   Function that generates the load instructions.
+*   sym ->  The Symbol table entry for the variable
+*   isExternal -> boolean that determines whether it is an external variable
+*/
+void generateLoadInstructions(Symbol sym, bool isExternal)
 {
-  if ((TastierKind)sym.Item2 == TastierKind.Var || (TastierKind)sym.Item2 == TastierKind.Const || (TastierKind)sym.Item2 == TastierKind.Point) {
+  if (sym != null && (TastierKind)sym.Item2 == TastierKind.Var || (TastierKind)sym.Item2 == TastierKind.Const) {
     if (sym.Item4 == 0) {
       if (isExternal) {
         program.Add(new Instruction("", "LoadG " + sym.Item1));
@@ -327,51 +418,87 @@ void generateLoadInstructions(Symbol sym, string name, bool isExternal)
   } else SemErr("variable expected");
 }
 
-void declareVariable(string name, int type, int kind, int levelIndirection, Scope currentScope, bool external, string structName = "")
+/*
+*   Function that generates the store instructions.
+*   sym ->  The Symbol table entry for the variable
+*   isExternal -> boolean that determines whether it is an external variable
+*/
+void generateStoreInstructions(Symbol sym, bool isExternal)
+{
+  if (sym.Item4 == 0) 
+  {
+    if (isExternal) 
+    {
+      program.Add(new Instruction("", "StoG " + sym.Item1));
+      // if the symbol is external, we also store it by name. The linker will resolve the name to an address.
+    } 
+    else 
+    {
+      program.Add(new Instruction("", "StoG " + (sym.Item5)));
+    }
+  }
+  else 
+  {
+    int lexicalLevelDifference = Math.Abs(openScopes.Count - sym.Item4)-1;
+    program.Add(new Instruction("", "Sto " + lexicalLevelDifference + " " + sym.Item5));
+  } 
+}
+
+/*
+*   Function that generates a symbol table entry for a variable
+*   name -> The name of the symbol
+*   structName -> If the entry is for a struct, this will be the name of the struct,
+*   type -> The type of the symbol
+*   kind -> The kind of the symbol
+*   levelIndirection -> The symbols level of indirection
+*   currentScope -> The current scope
+*   external -> boolean that determines whether the variable is external
+*   inStruct -> boolean value that determines whether the variable declarations are within a struct declaration. Used to determine whether to allocate
+*               data memory for variables that are structs.
+*/
+void declareVariable(string name, string structName, int type, int kind, int levelIndirection, Scope currentScope, bool external, bool inStruct)
 {
   int tempAddress;
   Symbol testIdent;
-  Struct tempStruct;
-  if (external) 
+  int structIndex = -1;
+
+  // Checks if the struct exists and retrives the index of the struct in the list of structs.
+  if(type == (int)TastierType.Struct)
   {
-    externalDeclarations.Push(new Symbol(name, kind, type, 0, 0, levelIndirection));
-  } 
-  else 
-  {
-    if((openScopes.Count-1) == 0 || (type == (int)TastierType.Struct && levelIndirection == 0) )
-    {
-      tempAddress = freeMemAddress;
-      if(type == (int)TastierType.Struct)
-      {
-        if(structExists(structName))
-        {
-          tempStruct = getStruct(structName);
-          freeMemAddress = freeMemAddress + tempStruct.Size() + 1;
-          constants.Add(new Instruction("", "Const " + tempStruct.Size()));
-          constants.Add(new Instruction("", "StoG " + tempAddress));
-        }
-        else
-        {
-          SemErr("The struct " + structName + " does " + " not exits.");
-          return;
-        }
-      }
-      else
-      {
-        freeMemAddress++;
-      }
-    }
+    if(structExists(structName)) structIndex = getStructIndex(structName);
     else
     {
-      tempAddress = currentScope.Count(s => s.Item2 == (int)TastierKind.Var || s.Item2 == (int)TastierKind.Const || s.Item2 == (int)TastierKind.Point);
+      SemErr("The struct " + structName + " does " + " not exits.");
+      return;
     }
-    currentScope.Push(new Symbol(name, kind, (int)type, openScopes.Count-1, tempAddress, levelIndirection));
+  }
+
+  if (external) externalDeclarations.Push(new Symbol(name, kind, type, 0, 0, levelIndirection, structIndex));
+  else 
+  { 
+    // If a global variable and not in a struct, allocate datamemory for the variable. Otherwise store in the stackframe
+    if(!inStruct && ((openScopes.Count-1) == 0 ))
+    {
+      tempAddress = freeMemAddress;
+      freeMemAddress++;
+    }
+    else tempAddress = currentScope.Count(s => s.Item2 == (int)TastierKind.Var || s.Item2 == (int)TastierKind.Const);
+
+    // Generate symbol table entry. 
+    currentScope.Push(new Symbol(name, kind, (int)type, openScopes.Count-1, tempAddress, levelIndirection, structIndex));
     testIdent = currentScope.Peek();
-    Console.WriteLine((testIdent.Item4 == 0 ? "Global " : "Local ") + (TastierType)testIdent.Item3 + " " + testIdent.Item1 + " Address: " + testIdent.Item5 + " Scope Level " + testIdent.Item4);
+
+    // Allocates datamemory if the variable declared is a struct and not within a struct declaration
+    if(!inStruct && type == (int)TastierType.Struct && levelIndirection == 0 && structExists(structName))
+    {
+      tempAddress = allocateStruct(structName);     // Allocates memory for the struct and any other structs it might contain.
+      // Generates code to store the pointer to the struct. 
+      program.Add(new Instruction("", "Const " + tempAddress));
+      generateStoreInstructions(testIdent, external);
+    }  
+    
   }
 }
-
-
 
 
 /*
@@ -388,7 +515,7 @@ void declareVariable(string name, int type, int kind, int levelIndirection, Scop
 CHARACTERS
 letter = 'A'..'Z'+'a'..'z'.
   digit = '0'..'9'.
-  chars = '\0'..'~'-'"'-letter-digit.
+  chars = '\0'..'~'-'"'-letter-digit.             /* All ASCII characters, excluding letters, digits or the quote symbol  */
   cr  = '\r'.
   lf  = '\n'.
   tab = '\t'.
@@ -396,7 +523,7 @@ letter = 'A'..'Z'+'a'..'z'.
 TOKENS
   ident  = letter {letter | digit}.
   number = digit {digit}.
-  Chars = '"' [{letter|digit|chars}] '"'.
+  strings = '"' [{letter|digit|chars}] '"'.       /* A string is any sequence of ASCII character surounded with quote symbols  */
 
 
 COMMENTS FROM "/*" TO "*/" NESTED
@@ -407,10 +534,10 @@ IGNORE cr + lf + tab
 PRODUCTIONS
 
 /*------------------------------------------------------------------------*/
-
+  // Production for string literals
 String<out string String>  (. string outString; .)    
 =                               
-    Chars                     (. outString = t.val; .)
+    strings                   (. outString = t.val; .)
                               (. Console.WriteLine("String " + outString); .)
                               (. String = outString; .).                          
 
@@ -422,12 +549,19 @@ AddOp<out Instruction inst>
   | '-'                         (.  inst = new Instruction("", "Sub"); .)
   ).
 
+ShiftOp<out Instruction inst>
+=                               (.  inst = new Instruction("", "ShiftL"); .)
+  ( "<<"
+  | ">>"                         (.  inst = new Instruction("", "ShiftR"); .)
+  ).
+
+
 /*------------------------------------------------------------------------*/
 
 Expr<out TastierType type>      (.  TastierType type1; Instruction inst; .)
-= SimExpr<out type>
+= ComExpr<out type>
   [ RelOp<out inst>
-    SimExpr<out type1>          (.
+    ComExpr<out type1>          (.
                                     if (type != type1) {
                                       SemErr("incompatible types");
                                     }
@@ -440,9 +574,14 @@ Expr<out TastierType type>      (.  TastierType type1; Instruction inst; .)
 
 /*------------------------------------------------------------------------*/
 
-Factor<out TastierType type>    (.  int n; Symbol sym; string name; string value; int length; int stringPointer; bool array = false;
-                                    int levelIndirection = 0; .)
-=                               (.  type = TastierType.Undefined; .)
+Factor<out TastierType type>    (.  int n; Symbol sym; string name; string value; string structVar; bool arrayOrStruct = false;
+                                    int levelIndirection = 0; int varsIndirection = 0; int structIndex = -1; .)
+=                               (.  type = TastierType.Undefined; TastierType type2 = TastierType.Undefined; 
+                                    /*
+                                    *   The production begining with 'ident' was extended so an ident can be of the form 'ident', 'ident.structVar', 
+                                    *   'ident[a][a1][a2][a3]...[aN]' or 'ident.structVar[a][a1][a2][a3]...[aN]'
+                                    */
+                                .)
   ( Ident<out name>             (.
                                     bool isExternal = false; //CS3071 students can ignore external declarations, since they only deal with compilation of single files.
                                     sym = lookup(openScopes, name);
@@ -450,59 +589,122 @@ Factor<out TastierType type>    (.  int n; Symbol sym; string name; string value
                                       sym = _lookup(externalDeclarations, name);
                                       isExternal = true;
                                     }
-                                .)
-  [
-    '[' Expr<out type> ']'      (.  if(type != TastierType.Integer)
-                                    {
-                                      SemErr("Array Index: integer expected, " + type + " found.");
-                                    }
-                                    else
-                                    {
-                                      array = true;
-                                      if ((TastierKind)sym.Item2 != TastierKind.Point) 
-                                      {
-                                        SemErr("pointer expected");
-                                      }
-                                      else
-                                      {
-                                        generateLoadInstructions(sym, name, isExternal);
-                                        program.Add(new Instruction("", "Offset"));
-                                        levelIndirection++;
-                                      }
-                                    }
-                                  .)
-      {
-        '[' Expr<out type> ']'    (.  if(type != TastierType.Integer)
-                                      {
-                                        SemErr("Array Index: integer expected, " + type + " found.");
-                                      }
-                                      else
-                                      {
-                                        program.Add(new Instruction("", "Swap"));
-                                        program.Add(new Instruction("", "LoadI"));
-                                        program.Add(new Instruction("", "Offset"));
-                                        levelIndirection++;
-                                      }
-                                  .)
-      }
-  ]
-                                (.
                                     if (sym == null) 
                                     {
                                       SemErr("reference to undefined variable " + name);
                                     }
-                                    else 
+                                    else
                                     {
+                                      // Store preliminary type and indirection as this could be an array access or an acess to a struct.
                                       type = (TastierType)sym.Item3;
-                                      if(array)
-                                      {
-                                        program.Add(new Instruction("", "LoadI"));
-                                      }
-                                      else
-                                      {
-                                        generateLoadInstructions(sym, name, isExternal);
-                                      }
+                                      varsIndirection = sym.Item6;
+                                      structIndex = sym.Item7;
                                     }
+                                .)
+  {
+      "."                       (.  // If first struct or array access, generate the load instruction
+                                  if(!arrayOrStruct) {
+                                      generateLoadInstructions(sym, isExternal);
+                                  }
+                                  else{
+                                    program.Add(new Instruction("", "LoadI"));
+                                  }
+                                .)
+      Ident<out structVar>      (. Struct tempStruct; StructVar tempStructVar; int structVarIndex;
+                                    /*  If '.' has been encountered then this is an access to a struct. First the type of name must be checked to
+                                    *   see if it is a struct. Next item7 in the symbol table entry for the first ident is checked to see if it
+                                    *   contains a valid index in the list of structs. The struct is then checked for the existance of the 2nd ident
+                                    *   If the struct contains the identifier the type and varsIndirection values are updated and the code to access
+                                    *   the value is generated.
+                                    *
+                                    */
+                                    if(type != TastierType.Struct) {
+                                      SemErr(name + " is not a struct.");
+                                    }
+                                    else if( structIndex < 0 || structIndex >= programStructs.Count) {
+                                      SemErr(name + " references an invalid struct");
+                                    }
+                                    else {
+                                      tempStruct = programStructs[structIndex];           // Retrieve the struct
+                                      if(tempStruct.contains(structVar))                // Check if it contains the structVar
+                                      {
+                                        tempStructVar = tempStruct.getVar(structVar);
+                                        type = (TastierType)tempStructVar.Item3;
+                                        varsIndirection = tempStructVar.Item4;
+                                        name = tempStructVar.Item1;
+                                        structVarIndex = tempStruct.getStructVarIndex(structVar);
+
+                                        // If the structs var is a struct, update the struct index variable
+                                        if(type == TastierType.Struct) {
+                                          structIndex = getStructIndex(tempStructVar.Item2);
+                                        }
+
+                                        /*  Generate code to access the structs variable
+                                        *   The variables index in the struct in pushed to the stack and the offset instruction will calculate the
+                                        *   the memory address of the variable. 
+                                        */
+                                        program.Add(new Instruction("", "Const " + structVarIndex));
+                                        program.Add(new Instruction("", "Offset"));
+                                        arrayOrStruct = true;
+                                      }
+                                      else {
+                                        SemErr("The struct " + name + " doesn't contain a " + structVar + " variable");
+                                      }
+
+                                    }
+
+                                .)
+  }
+  {                            
+    '['                         (.  
+                                    // Generate load instruction if there hasn't already been an array or struct access
+                                    if(arrayOrStruct) program.Add(new Instruction("", "LoadI"));
+                                    else  {
+                                        generateLoadInstructions(sym, isExternal);  
+                                    }
+                                .)
+    Expr<out type2> ']'         (.  
+                                    /*
+                                    *   The code for arrays is very similar to the code for structs. The type of the array index is checked to 
+                                    *   determine whether it is of type integer. The vars level of indirection is also determine whether the var
+                                    *   is an array and if it is to ensure that there aren't to many "[Expr]" productions. The code to access the 
+                                    *   arrays values is then generated
+                                    */
+
+                                    if(type2 != TastierType.Integer)  {
+                                      SemErr("Array Index: integer expected, " + type + " found.");
+                                    }
+                                    else if (varsIndirection < 1) {
+                                      SemErr("pointer expected");
+                                    }
+                                    else if (!(levelIndirection < varsIndirection))  {
+                                      SemErr("Invalid array access. This is an " + varsIndirection + " level array.");
+                                    }
+                                    else  {
+                                      /* 
+                                      *   Calculate the offset
+                                      */
+                                      program.Add(new Instruction("", "Offset"));
+                                      levelIndirection++;
+                                      arrayOrStruct = true;
+                                    }
+                                  .)
+  }
+                                (.
+                                  
+                                  /* 
+                                  *   If the identifier is a struct or an array, the memory address is already on top of the stack and must be loaded
+                                  *   the LoadI instruction loads the address of the value on the top of the stack. If the ident wasn't an array access
+                                  *   or a struct, the ident is loaded using the generateLoadInstructions function.
+                                  */
+                                  if(arrayOrStruct)
+                                  {
+                                    program.Add(new Instruction("", "LoadI"));
+                                  }
+                                  else
+                                  {
+                                    generateLoadInstructions(sym, isExternal);
+                                  }
                                 .)
   | number                      (.
                                     n = Convert.ToInt32(t.val);
@@ -521,12 +723,21 @@ Factor<out TastierType type>    (.  int n; Symbol sym; string name; string value
                                 .)
   | "true"                      (.  program.Add(new Instruction("", "Const " + 1)); type = TastierType.Boolean; .)
   | "false"                     (.  program.Add(new Instruction("", "Const " + 0)); type = TastierType.Boolean; .)
-  | String<out value>           (.  type = TastierType.String;
+  | String<out value>           (.  int length; int stringPointer;
+                                    /*
+                                    *   For string literals, code is generated that stores a p-string in the first free address in data-memory.
+                                    *   The code generated is added to the list of constant instructions which are executed as soon as the program
+                                    *   runs. The final instruction generated is added to the list of program instructions rather than the list of 
+                                    *   constants. The final instruction pushes the address of the string to the stack where the string can be accessed.
+                                    */
+                                    type = TastierType.String;
                                     length = value.Length-1;
                                     stringPointer = freeMemAddress;
                                     constants.Add(new Instruction("", "Const " + length));
                                     constants.Add(new Instruction("", "StoG " + freeMemAddress));
                                     freeMemAddress++;
+
+                                    //  Loop that stores every character in the string to data-memory.
                                     for(int i = 1; i < length; i++)
                                     {
                                       constants.Add(new Instruction("", "Const " + (int)value[i]));
@@ -537,6 +748,12 @@ Factor<out TastierType type>    (.  int n; Symbol sym; string name; string value
                                 .)
   | "malloc"
     Factor<out type>             (.  
+                                    /*
+                                    *   The malloc production is used to allocate data-memory at run-time. This is used to dynamically create
+                                    *   arrays while the program is running. 
+                                    *   The production returns a unique pointer type. This is a pointer to any type and can be assigned to any 
+                                    *   pointer value.
+                                    */
                                     if(type != TastierType.Integer)
                                     {
                                       SemErr("integer type expected but expression has type " + type);
@@ -567,7 +784,7 @@ MulOp<out Instruction inst>
 ProcDecl                        (.  string name; string label; Scope currentScope = openScopes.Peek(); int enterInstLocation = 0; bool external = false; .)
 = "void"
   Ident<out name>               (.
-                                    currentScope.Push(new Symbol(name, (int)TastierKind.Proc, (int)TastierType.Undefined, openScopes.Count, -1, -1));
+                                    currentScope.Push(new Symbol(name, (int)TastierKind.Proc, (int)TastierType.Undefined, openScopes.Count, -1, -1, -1));
                                     openScopes.Push(new Scope());
                                     currentScope = openScopes.Peek();
                                 .)
@@ -611,15 +828,15 @@ ProcDecl                        (.  string name; string label; Scope currentScop
                                     // now we can generate the Enter instruction properly
                                     program[enterInstLocation] =
                                       new Instruction(label, "Enter " +
-                                                      currentScope.Count(s => (s.Item2 == (int)TastierKind.Var) || s.Item2 == (int)TastierKind.Point));
+                                                      currentScope.Count(s => (s.Item2 == (int)TastierKind.Var)));
                                     System.Tuple<string,string> test = program[enterInstLocation];
-                                    //Console.WriteLine("Procedure Name: " + name + " Label: " + test.Item1 + " Scope Level " + (openScopes.Count-1));
+                                    Console.WriteLine("Procedure Name: " + name + " Label: " + test.Item1 + " Scope Level " + (openScopes.Count-1));
                                     openProcedureDeclarations.Pop();
                                 .).
 
 /*------------------------------------------------------------------------*/
 
-RelOp<out Instruction inst>
+RelOp<out Instruction inst>    
 =                                (.  inst = new Instruction("", "Equ"); .)
   ( '='
   | '<'                          (.  inst = new Instruction("", "Lss"); .)
@@ -633,7 +850,7 @@ RelOp<out Instruction inst>
 
 SimExpr<out TastierType type>   (.  TastierType type1; Instruction inst; .)
 = Term<out type>
-  { AddOp<out inst>
+  {AddOp<out inst>
     Term<out type1>             (.
                                     if (type != TastierType.Integer || type1 != TastierType.Integer) {
                                       SemErr("integer type expected");
@@ -644,8 +861,27 @@ SimExpr<out TastierType type>   (.  TastierType type1; Instruction inst; .)
 
 /*------------------------------------------------------------------------*/
 
-Stat                            (.  TastierType type; string name; Symbol sym; bool external = false; bool isExternal = false; .)
+ComExpr<out TastierType type>   (.  TastierType type1; Instruction inst; .)
+= SimExpr<out type>
+  {ShiftOp<out inst>
+    SimExpr<out type1>          (.
+                                  if (type != TastierType.Integer || type1 != TastierType.Integer) {
+                                    SemErr("integer type expected");
+                                  }
+                                  program.Add(inst);
+                                .)
+  }.
+    
 
+/*------------------------------------------------------------------------*/
+
+Stat                            (.  TastierType type; string name; Symbol sym; bool external = false; bool isExternal = false;
+                                    /*
+                                    *   The stament production was split into two productions, assignment and procedure call productions were moved
+                                    *   to the SimpleStat production and the remaing productions remained in Stat.
+                                    *   The productions for a 'for' and a 'switch' statement were also added to the Stat production 
+                                    */
+                                .)
 = SimpleStat ';'
 | "if"
   '(' Expr<out type> ')'        (.
@@ -684,9 +920,18 @@ Stat                            (.  TastierType type; string name; Symbol sym; b
                                     program.Add(new Instruction(openLabels.Pop(), "Nop")); // put the loop end label here
                                 .)
 | "for"                         
-  '(' [SimpleStat] ';'              (.  string loopStartLabel = generateLabel();
-                                    openLabels.Push(generateLabel()); 
-                                    openLabels.Push(generateLabel()); program.Add(new Instruction("", "Jmp " + openLabels.Peek()));
+  '(' [SimpleStat] ';'          (.  
+                                    /*
+                                    *   A for loop contains an initial SimpleStat that can be empty. This is used for intilising data and is only
+                                    *   run on the first iteration of the loop. This followed by another optional SimpleStatment that is used to 
+                                    *   update data. This is executed at the start of each loop except on the first iteration. The final part of the
+                                    *   for-loop declaration is an expression which must return a boolean. This determines whether the loop will terminate
+                                    *   The expression is executed at the start of every iteration of the loop.
+                                    */
+                                    string loopStartLabel = generateLabel();    // Store loop start in order to jump to the start of the loop again
+                                    openLabels.Push(generateLabel());           // Generate label to jump to end of loop 
+                                    openLabels.Push(generateLabel());           // Generate label to jump over data-update on first iteration
+                                    program.Add(new Instruction("", "Jmp " + openLabels.Peek()));
                                     program.Add(new Instruction(loopStartLabel, "Nop"));
                                 .)
     [SimpleStat]   ';'          (. program.Add(new Instruction(openLabels.Pop(), "Nop")); .)
@@ -744,7 +989,7 @@ Stat                            (.  TastierType type; string name; Symbol sym; b
                                       program.Add(new Instruction("", "WriteStr"));
                                     }
                                     else {
-                                      SemErr("integer type expected");
+                                      SemErr("integer or string type expected");
                                     }
                                 .)
   { ','
@@ -756,71 +1001,201 @@ Stat                            (.  TastierType type; string name; Symbol sym; b
                                       program.Add(new Instruction("", "WriteStr"));
                                     }
                                     else {
-                                      SemErr("integer type expected");
+                                      SemErr("integer or string type expected");
                                     }
                                 .)
   }
   ';' 
 
-| '{' { Stat | VarDecl<external> } '}' .
+| '{' { Stat | VarDecl<external> } '}'
+
+| "switch"                               (.   string switchEndLabel = generateLabel(); string currentCase = "";
+                                              TastierType CaseType = TastierType.Undefined;
+                                              /*
+                                              *   The switch statement consists of a "switch" followed by a expression (whose type must be boolean or
+                                              *   an integer). This is followed by at least one case statement. The case 
+                                              *   statment consists of a "case" followed by an expression. To compare the result
+                                              *   of the case against the switch result, the value of the switch is duplicated and then compared
+                                              *   with the result of the case expression. If the result is true the statments following the case are
+                                              *   executed, otherwise the next case is checked. The switch statement is structured similar to a case 
+                                              *   statement in Pascal or Haskell as only one branch in the switch statement can be executed. As a 
+                                              *   result there is no fall-through in switch statements. 
+                                              *   Switch statements can also include an optional default case that is executed only if none of the 
+                                              *   other cases have matched. At the end of the switch statement, the end label is generated and the 
+                                              *   new pop instruction is used to remove the switch result from the top of the stack.
+                                              */
+                                        .)
+    Expr<out type> "{"                  (. 
+                                            // Can only match a switch statement using an integer or a boolean
+                                            if(type != TastierType.Integer && type != TastierType.Boolean)
+                                            {
+                                              SemErr("Invalid type. Cannot match switch with " + type + " type.");
+                                            }
+                                            openLabels.Push(generateLabel());     /*  inital case label for first case. As cases are optional this first label is superfluous but 
+                                                                                  *   it ensures that there is a label generated to add to the start of case.
+                                                                                  */
+                                        .)
+    {
+      "case"                            (.  program.Add(new Instruction(openLabels.Pop(), "Nop"));
+                                            currentCase = generateLabel();     // label to jump to current cases statements
+                                            openLabels.Push(generateLabel());  // next case label
+                                            program.Add(new Instruction("", "Dup"));
+                                        .)
+      Expr<out CaseType>                (.  // The cases type must match the type of the switch
+                                            if(type != CaseType) SemErr("Case Types do not match. Expecting an " + type + " type.");
+                                            else
+                                            {
+                                              // Check equality and jump to the current cases statements if true
+                                              program.Add(new Instruction("", "Neq"));
+                                              program.Add(new Instruction("", "FJmp " + currentCase));
+                                            }
+                                        .)
+      {
+        ","                             (.  program.Add(new Instruction("", "Dup"));.)
+        Expr<out CaseType>              (.  // The cases type must match the type of the switch
+                                            if(type != CaseType) SemErr("Case Types do not match. Expecting an " + type + " type.");
+                                            else
+                                            {
+                                              // Check equality and jump to the current cases statements if true
+                                              program.Add(new Instruction("", "Neq"));
+                                              program.Add(new Instruction("", "FJmp " + currentCase));
+                                            }
+                                        .)
+      }
+      ":"                                (.   program.Add(new Instruction("", "Jmp " + openLabels.Peek()));  // None of the cases matched so check next case block 
+                                              program.Add(new Instruction(currentCase, "Nop"));              // Generate label for the current case
+                                        .)
+      Stat
+                                        // Jump to the end of the switch statement as only one case can match
+                                        (. program.Add(new Instruction("", "Jmp " + switchEndLabel)); .) 
+    }                     
+                                        (. 
+                                            /*  If there are no more cases, generate label. If there is a default it is executed otherwise the end
+                                            *   of the switch statment has been reached without matching any cases
+                                            */
+                                            program.Add(new Instruction(openLabels.Pop(), "Nop")); 
+                                        .)                                                                
+    { "default:"                           
+        Stat
+    }
+
+                                          (.  // Generate end label and pop the switchs result from the stack
+                                              program.Add(new Instruction(switchEndLabel, "Nop"));
+                                              program.Add(new Instruction("", "Pop"));     //Pops off duplicates
+                                          .)
+  "}" .
 
 /*------------------------------------------------------------------------*/
 
-SimpleStat                      (.  TastierType type; TastierType type1; TastierType type2;  string name; Symbol sym; bool isExternal = false; 
-                                    string tempSym; bool array = false; int levelIndirection = 0; .)
+SimpleStat                      (.  TastierType type; TastierType type1; TastierType type2;  string name; string structVar; Symbol sym; bool isExternal = false; 
+                                    string tempLabel; bool arrayOrStruct = false; int levelIndirection = 0; Struct tempStruct; StructVar tempStructVar; int structVarIndex;
+                                    int itemType = (int)TastierType.Undefined; int varsLevelIndirection = -1; int structIndex = -1; .)
+                                    // The simpleStatment production was used to seperate procedure calls and assignment from other the statements.
+
 
 = Ident<out name>               (.
+                                    // Check that the ident exists and store a preliminary type and indirection value
                                     sym = lookup(openScopes, name);
-                                    if (sym == null) 
-                                    {
+                                    if (sym == null) {
                                       sym = _lookup(externalDeclarations, name);
                                       isExternal = true;
                                     }
-                                    if (sym == null) 
-                                    {
+                                    if (sym == null) {
                                       SemErr("reference to undefined variable " + name);
+                                    }
+                                    else  {
+                                      itemType = sym.Item3;
+                                      varsLevelIndirection = sym.Item6;
+                                      structIndex = sym.Item7;
                                     }
 
                                 .)
-  ( [
-      '[' Expr<out type> ']'    (.  if(type != TastierType.Integer)
+  ( 
+    {
+      "."                     (.
+                                // If first struct or array access, generate the load instruction
+                                if(!arrayOrStruct && sym != null) {
+                                    generateLoadInstructions(sym, isExternal);
+                                }
+                                else {
+                                  program.Add(new Instruction("", "LoadI"));
+                                }
+                              .) 
+      Ident<out structVar>    (. /*  If there is an access to a struct, the idents type is checked to ensure that it is a struct and that it's 
+                                  *   symbol table entry references a valid struct in the list of declared structs. If it is a valid struct, the 
+                                  *   struct is loaded and the existance of the structVar is checked. The code to acess the struct variable is then
+                                  *   generated and the type and indirection variables are then updated.
+                                  */
+                                  if(itemType != (int)TastierType.Struct)  {
+                                    SemErr(name + " is not a struct.");
+                                  }
+                                  else if( structIndex < 0 || structIndex >= programStructs.Count)  {
+                                    SemErr(name + " references an invalid struct");
+                                  }
+                                  else  {
+                                    tempStruct = programStructs[structIndex];
+                                    if(tempStruct.contains(structVar))  {
+                                      // Load var and update type and indirections
+                                      tempStructVar = tempStruct.getVar(structVar);
+                                      itemType = tempStructVar.Item3;
+                                      name = tempStructVar.Item1;
+                                      varsLevelIndirection = tempStructVar.Item4;
+                                      structVarIndex = tempStruct.getStructVarIndex(structVar);
+
+                                      // If the structs var is a struct, update the struct index variable
+                                      if((TastierType)itemType == TastierType.Struct) {
+                                        structIndex = getStructIndex(tempStructVar.Item2);
+                                      }
+
+                                      //  Generate code to access struct variable
+                                      program.Add(new Instruction("", "Const " + structVarIndex));
+                                      program.Add(new Instruction("", "Offset"));
+                                      arrayOrStruct = true;
+                                    }
+                                    else  {
+                                      SemErr("The struct " + name + " doesn't contain a " + structVar + " variable");
+                                    }
+                                  }
+
+                                .)
+      
+    }
+    {
+      '['                       (.  
+                                    // Generate load instruction if there hasn't already been an array or struct access
+                                    if(!arrayOrStruct && sym != null) generateLoadInstructions(sym, isExternal); 
+                                    else  {
+                                      program.Add(new Instruction("", "LoadI"));
+                                    }
+                                .)
+      Expr<out type> ']'        (.  if(type != TastierType.Integer)
                                     {
                                       SemErr("Array Index: integer expected, " + type + " found.");
                                     }
-                                    else
-                                    {
-                                      array = true;
-                                      generateLoadInstructions(sym, name, isExternal);
+                                    else {
                                       program.Add(new Instruction("", "Offset"));
                                       levelIndirection++;
+                                      arrayOrStruct = true;
                                     }
                                 .)
-      {
-        '[' Expr<out type> ']'    (.  if(type != TastierType.Integer)
-                                      {
-                                        SemErr("Array Index: integer expected, " + type + " found.");
-                                      }
-                                      else
-                                      {
-                                        program.Add(new Instruction("", "Swap"));
-                                        program.Add(new Instruction("", "LoadI"));
-                                        program.Add(new Instruction("", "Offset"));
-                                        levelIndirection++;
-                                      }
-                                  .)
-      }
-    ]
+    }
+
     ":="                         (.
-                                    if ((TastierKind)sym.Item2 != TastierKind.Var && (TastierKind)sym.Item2 != TastierKind.Point) {
+                                    // Cannot assign to a non-variable or to a constant.
+                                    if (sym != null && (TastierKind)sym.Item2 != TastierKind.Var) {
                                       SemErr("cannot assign to non-variable or non-pointer");
                                     }
-                                    else if (sym.Item2 == (int)TastierKind.Const) {
+                                    else if (sym != null && sym.Item2 == (int)TastierKind.Const) {
                                       SemErr("cannot assign to const variable");
                                     }
                                 .)
     Expr<out type> 
     [
-    '?'                         (. if(type != TastierType.Boolean) {
+    '?'                         (.
+                                  /*
+                                  *   Optional ternary operator. If false, jumps over first expression and evaluates the second
+                                  */ 
+                                  if(type != TastierType.Boolean) {
                                       SemErr("Conditional assignment requires a relational expression");
                                    }
                                    else {
@@ -830,10 +1205,10 @@ SimpleStat                      (.  TastierType type; TastierType type1; Tastier
                                 .)
     Expr<out type1> 
     ':'                         (.  
-                                  tempSym = openLabels.Pop();
+                                  tempLabel = openLabels.Pop();
                                   openLabels.Push(generateLabel());
                                   program.Add(new Instruction("", "Jmp " + openLabels.Peek()));
-                                  program.Add(new Instruction(tempSym, "Nop")); 
+                                  program.Add(new Instruction(tempLabel, "Nop")); 
                                 .)
     Expr<out type2>             (.
                                   if(type1 != type2) {
@@ -847,41 +1222,28 @@ SimpleStat                      (.  TastierType type; TastierType type1; Tastier
 
     ]
                                 (.
-                                    if (type != (TastierType)sym.Item3 && !(type == TastierType.Pointer && (TastierKind)sym.Item2 == TastierKind.Point) ) 
-                                    {
+                                    /*
+                                    *   Before the value is assigned, their types are checked to to ensure that they are the same. There is an 
+                                    *   exception to the above if the type of the value being assigned is a pointer and the variable it is being 
+                                    *   assigned to is also a pointer. 
+                                    */
+                                    if (type != (TastierType)itemType && !(type == TastierType.Pointer && varsLevelIndirection != 0) ) {
                                       SemErr("incompatible types");
                                     }
-                                    else
-                                    {
-                                      if((TastierKind)sym.Item2 == TastierKind.Point && type != TastierType.Pointer && levelIndirection != sym.Item6)
-                                      {
+                                    else  {
+                                      // Prevent a value being assigned to a pointer
+                                      if(varsLevelIndirection > 0 && type != TastierType.Pointer && levelIndirection != varsLevelIndirection)  {
                                         SemErr("cannot assign a value a pointer. Use malloc instead.");
                                       }
-                                      else
-                                      {
-                                        if(array)
-                                        {                              
-                                        program.Add(new Instruction("", "StoI"));
+                                      else  {
+                                        if(arrayOrStruct) { 
+                                          // If there has previously been an array or struct access, the address is on the stack
+                                          // The StoI instruction stores a value in the address thats on the stack                             
+                                          program.Add(new Instruction("", "StoI"));
                                         }
-                                        else
-                                        {
-                                          if (sym.Item4 == 0) 
-                                          {
-                                            if (isExternal) 
-                                            {
-                                              program.Add(new Instruction("", "StoG " + sym.Item1));
-                                              // if the symbol is external, we also store it by name. The linker will resolve the name to an address.
-                                            } 
-                                            else 
-                                            {
-                                              program.Add(new Instruction("", "StoG " + (sym.Item5)));
-                                            }
-                                          }
-                                          else 
-                                          {
-                                            int lexicalLevelDifference = Math.Abs(openScopes.Count - sym.Item4)-1;
-                                            program.Add(new Instruction("", "Sto " + lexicalLevelDifference + " " + sym.Item5));
-                                          }
+                                        else if(sym != null)  {
+                                          // Otherwise generate a store instruction
+                                          generateStoreInstructions(sym, isExternal);
                                         }
                                       }
                                     }
@@ -906,7 +1268,7 @@ Tastier                         (.  string name; bool external = false; .)
                                     openScopes.Push(new Scope());
                                 .)
   '{'
-                                (. constants.Add(new Instruction("$data", "Nop")); .)
+                                (. constants.Add(new Instruction("$data", "Nop")); /* Intilise the constants function. This runs at the start*/ .) 
     [ConsDeclList] 
     {structDecl}
     { VarDecl<external> | ProcDecl | ExternDecl }
@@ -936,8 +1298,11 @@ Tastier                         (.  string name; bool external = false; .)
                                         SemErr("external item " + s.Item1 + " has no defined type");
                                       }
                                     }
+                                    // Store the current free memory address at location 0 in datamemory
                                     constants.Add(new Instruction("", "Const " + freeMemAddress));
                                     constants.Add(new Instruction("", "StoG " + 3));
+
+                                    // Leave the $data function
                                     constants.Add(new Instruction("", "Leave"));
                                     constants.Add(new Instruction("", "Ret"));
                                     header.AddRange(constants);
@@ -971,27 +1336,41 @@ Type<out TastierType type>
 
 /*------------------------------------------------------------------------*/
 
-VarDecl<bool external>          (.
-                                    string name; string name2 = ""; string temp; TastierType type; Scope currentScope = openScopes.Peek(); int tempAddress; 
+VarDecl<bool external, bool inStruct=false>
+                                (.
+                                    string name; string name2 = ""; string temp; TastierType type; Scope currentScope = openScopes.Peek(); 
                                     int kind = (int)TastierKind.Var; int levelIndirection = 0;
                                 .)
 = Type<out type>
-  {'*'                          (.  kind = (int)TastierKind.Point;
-                                    levelIndirection++;
-                                 .)
+  {'*'                          (. levelIndirection++; /* Increase indirection for every pointer symbol encountered */.)
   }
   Ident<out name> 
-  {
-    Ident<out name2>            (.  temp = name2;
+  [
+    Ident<out name2>            (.  // If a second identifier has been found, the type is checked to ensure that it is a struct 
+                                    if(type != TastierType.Struct)
+                                    {
+                                      SemErr("Type must be a struct");
+                                    }
+                                    else if(levelIndirection != 0)
+                                    {
+                                      SemErr("Invalid pointer type. Cannot have a pointer to a struct.");
+                                    }
+                                    temp = name2;
                                     name2 = name;
                                     name = temp;
                                 .)
-  }
+  ]
                                 (.
-                                    declareVariable(name, (int)type, kind, levelIndirection, currentScope, external, name2);
+                                  if(type == TastierType.Struct && name2.Equals(""))
+                                    {
+                                      SemErr("Struct name is missing");
+                                    }
+                                .)
+                                (.  // Call the declareVariable function to declare variables
+                                    declareVariable(name, name2, (int)type, kind, levelIndirection, currentScope, external, inStruct);
                                 .)
   { ',' Ident<out name>         (.
-                                    declareVariable(name, (int)type, kind, levelIndirection, currentScope, external, name2);
+                                    declareVariable(name, name2, (int)type, kind, levelIndirection, currentScope, external, inStruct);
                                 .)
   } ';'.
 
@@ -999,12 +1378,15 @@ ExternDecl                      (.  string name; bool external = true; Scope cur
 = "external"
   ( VarDecl<external>
   | "procedure" Ident<out name> ';'
-                                (.  externalDeclarations.Push(new Symbol(name, (int)TastierKind.Proc, (int)TastierType.Undefined, 1, -1, -1)); .)
+                                (.  externalDeclarations.Push(new Symbol(name, (int)TastierKind.Proc, (int)TastierType.Undefined, 1, -1, -1, -1)); .)
   ) .
 
 /*------------------------------------------------------------------------*/
 
-ConsDeclList                    
+ConsDeclList                    (.  /*
+                                    *   A constant declaration begins with the word const followed by one or more ConsDecl's.
+                                    */
+                                .)
 = "const"
   ConsDecl 
   {
@@ -1014,27 +1396,43 @@ ConsDeclList
 
 /*------------------------------------------------------------------------*/
 
-ConsDecl                        (.
-                                    string name; TastierType type; Scope currentScope = openScopes.Peek(); int tempProgCount; 
+ConsDecl                        (.  /*
+                                    *   A constant declaration consists of an identifer followed by an assignment.
+                                    */
+                                    string name; TastierType type; Scope currentScope = openScopes.Peek(); int currentProgCount = program.Count; 
                                 .)
 = Ident<out name>               
   ":="
   Expr<out type> ';'            (.  
-                                    currentScope.Push(new Symbol(name, (int)TastierKind.Const, (int)type, openScopes.Count-1, freeMemAddress, 0));
-                                    freeMemAddress++;
-                                    Symbol testIdent = currentScope.Peek();
-                                    tempProgCount = program.Count-1;              //Expr wrong. loop instead.
-                                    constants.Add(program[tempProgCount]);
-                                    program.RemoveAt(tempProgCount);
-                                    constants.Add(new Instruction("", "StoG " + testIdent.Item5));
+                                    if(type == TastierType.Integer || type == TastierType.Boolean || type == TastierType.String)  {
+                                      // Add any instructions generated by the Expr production to the list of constant instructions and remove from the list of instructions
+                                      while(program.Count > currentProgCount)
+                                      {
+                                        constants.Add(program[currentProgCount]);
+                                        program.RemoveAt(currentProgCount);
+                                      }
+                                      currentScope.Push(new Symbol(name, (int)TastierKind.Const, (int)type, openScopes.Count-1, freeMemAddress, 0, -1));
+                                      freeMemAddress++;
+                                      Symbol testIdent = currentScope.Peek();
+                                      constants.Add(new Instruction("", "StoG " + testIdent.Item5)); 
+                                    }
+                                    else  {
+                                      SemErr("Cannot declare a constant of type " + type);
+                                    }
                                 .).
 /*------------------------------------------------------------------------*/
 
 structDecl                       (.
                                     string name; Scope currentScope = openScopes.Peek(); int currentVar = currentScope.Count; Symbol current; 
-                                    Struct newStruct;;
+                                    Struct newStruct; string structName;
+                                    /*
+                                    *   Struct are declared with 'Struct' followed by the name of the struct. The structs variables are enclosed
+                                    *   between curly braces. The struct must contain at least one variable. After a variable has been declared,
+                                    *   they are removed from the current scope and added to the current structs list of variables.
+                                    */
                                 .)
 = "Struct" Ident<out name>      (.  
+                                  // Check if struct already exists
                                   if(structExists(name))
                                   {
                                     SemErr("The Struct " + name + " already exists. Cannot be redeclared.");
@@ -1042,40 +1440,39 @@ structDecl                       (.
                                   newStruct = new Struct(name); 
                                 .)
   "{"
-    VarDecl<false>              (.
-                                  while(currentScope.Count > currentVar)
-                                  {
-                                    current = currentScope.Pop();
-                                    if(newStruct.contains(current.Item1))
-                                    {
-                                      SemErr("The variable " + current.Item1 + " in the " + name + " Struct already exists. Cannot be redeclared.");
-                                    }
-                                    else
-                                    {
-                                      newStruct.addVar(new StructVar(current.Item1, current.Item3, current.Item6));
-                                      Console.WriteLine(current.Item1);
-                                    }
-                                  }
-                                .)
+    VarDecl<false, true>        
     {
-      VarDecl<false>            (.
+      VarDecl<false, true>      
+    }
+                                (.
+                                  // Remove each symbol added to the current scopes symbol table and add to the structs list of vars
                                   while(currentScope.Count > currentVar)
                                   {
                                     current = currentScope.Pop();
+                                    // Check if the variable already exists
                                     if(newStruct.contains(current.Item1))
                                     {
                                       SemErr("The variable " + current.Item1 + " in the " + name + " Struct already exists. Cannot be redeclared.");
                                     }
                                     else
                                     {
-                                      newStruct.addVar(new StructVar(current.Item1, current.Item3, current.Item6));
-                                      Console.WriteLine(current.Item1);
+                                      // If the variable is a struct, get the name of the struct, otherwise default to ""
+                                      if(current.Item7 >= 0)
+                                      {
+                                        structName = programStructs[current.Item7].Name();
+                                      }
+                                      else
+                                      {
+                                        structName = "";
+                                      }
+                                      // Add to stucts list of vars
+                                      newStruct.addVar(new StructVar(current.Item1, structName, current.Item3, current.Item6));
                                     }
                                   }
                                 .)
-    }                           (. Console.WriteLine(newStruct.Size()); .)
   "}"
-                                (. if(!structExists(name)) programStructs.Add(newStruct); .).
+                                (. // If the struct doesn't already exist, add it to the list of structs
+                                  if(!structExists(name)) programStructs.Add(newStruct); .).
 
 
 END Tastier.
